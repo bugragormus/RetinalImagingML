@@ -1,3 +1,14 @@
+---
+title: Retinal Vision XAI
+emoji: 👁️
+colorFrom: blue
+colorTo: indigo
+sdk: gradio
+sdk_version: 4.44.0
+app_file: app.py
+pinned: false
+---
+
 # 👁️ RetinalVision-XAI: Clinical Retinal Disease Diagnosis & Explainable AI Benchmark
 
 [![Hugging Face Spaces](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Spaces%20Live%20Demo-blue)](https://huggingface.co/spaces/bugragormus/retinal-vision-xai)
