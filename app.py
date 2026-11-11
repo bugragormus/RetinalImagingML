@@ -20,7 +20,7 @@ except ImportError:
 if spaces is not None:
     @spaces.GPU
     def _zero_gpu_init():
-        """Keeps Hugging Face ZeroGPU AST parser satisfied without blocking CPU calls."""
+        """Satisfies ZeroGPU AST scanner without wrapping CPU inference."""
         pass
 
 # Try importing tensorflow and gradcam
@@ -125,7 +125,7 @@ def analyze_fundus_image(image):
             std_val = float(np.std(orig_rgb))
 
             if mean_val < 70:
-                pred_idx = 0  # Cataract (typically lower global luminosity / cloudy)
+                pred_idx = 0  # Cataract (typically cloudy/lower global luminosity)
             elif std_val > 52:
                 pred_idx = 1  # Diabetic Retinopathy (high localized texture variance / exudates)
             elif orig_rgb[h // 2, w // 2, 0] > 135:
@@ -180,6 +180,9 @@ custom_css = """
 .hero-header { text-align: center; margin-bottom: 1.5rem; }
 .hero-header h1 { font-size: 2.2rem; font-weight: 800; color: #0f172a; margin-bottom: 0.4rem; letter-spacing: -0.02em; }
 .hero-header p { font-size: 1.05rem; color: #475569; }
+.benchmark-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.92rem; margin-top: 1rem; }
+.benchmark-table th { padding: 12px 14px; background: rgba(30, 41, 59, 0.9); color: #f8fafc; font-weight: 600; border-bottom: 2px solid #334155; }
+.benchmark-table td { padding: 12px 14px; border-bottom: 1px solid rgba(148, 163, 184, 0.2); }
 """
 
 with gr.Blocks(theme=gr.themes.Soft(), css=custom_css, title="RetinalVision-XAI") as demo:
@@ -210,14 +213,15 @@ with gr.Blocks(theme=gr.themes.Soft(), css=custom_css, title="RetinalVision-XAI"
                             if os.path.exists(full_p):
                                 example_list.append([full_p])
 
+                    analyze_btn = gr.Button("🔍 Analyze Fundus & Generate Diagnosis", variant="primary", size="lg")
+
                     if example_list:
                         gr.Examples(
                             examples=example_list,
                             inputs=input_img,
-                            label="📋 Clinical Sample Scans (Click to Load)"
+                            outputs=[None],  # Populates image input
+                            label="📋 Clinical Sample Scans (Click to Load Image)"
                         )
-
-                    analyze_btn = gr.Button("🔍 Analyze Fundus & Generate Diagnosis", variant="primary", size="lg")
 
                 with gr.Column(scale=6):
                     out_label = gr.Label(num_top_classes=4, label="Diagnostic Probabilities")
@@ -227,23 +231,87 @@ with gr.Blocks(theme=gr.themes.Soft(), css=custom_css, title="RetinalVision-XAI"
             analyze_btn.click(
                 fn=analyze_fundus_image,
                 inputs=[input_img],
-                outputs=[out_label, out_heatmap, out_report]
+                outputs=[out_label, out_heatmap, out_report],
+                api_name=False
             )
 
         with gr.TabItem("📊 Comparative Model Benchmark"):
-            gr.Markdown("""
-### 🔬 Empirical Benchmark across 4,127 Clinical Fundus Scans
-
-Performance comparison of 6 distinct deep learning and hybrid architectures evaluated across identical multi-class validation splits:
-
-| Rank | Architecture | Test Accuracy | Macro F1-Score | Diabetic Retinopathy Recall | Precision | Characteristics & Architectural Notes |
-| :---: | :--- | :---: | :---: | :---: | :--- |
-| 🥇 | **InceptionV3 (Transfer Learning)** | **93.25%** | **0.93** | **100.0%** | **0.93** | **Champion Model:** Multi-scale inception kernels simultaneously capturing microvascular lesions and optic nerve cupping. |
-| 🥈 | **ResNet50 + RBF-SVM Hybrid** | **88.40%** | **0.87** | **96.8%** | **0.88** | Deep residual feature extraction coupled with deterministic radial basis kernel classification. |
-| 🥉 | **Custom CNN (KerasTuner Tuned)** | **74.66%** | **0.73** | **98.0%** | **0.74** | Dual Conv2D + Dense architecture optimized via RandomSearch hyperparameter tuning. |
-| 4 | **ResNet50v2 + Gradient Boosting** | **72.10%** | **0.71** | **91.5%** | **0.72** | 100-estimator gradient boosted decision trees over latent residual feature vectors. |
-| 5 | **Decision Tree & Random Forest** | **68.50%** | **0.67** | **85.2%** | **0.68** | Classical ensemble tree baseline over flattened morphological representations. |
-| 6 | **Linear SVM Baseline** | **64.20%** | **0.62** | **82.0%** | **0.63** | Convex optimization baseline evaluated on raw pixel intensity arrays. |
+            gr.HTML("""
+            <div style="margin-top: 0.5rem; margin-bottom: 1rem;">
+                <h3 style="font-size: 1.35rem; font-weight: 700; margin-bottom: 0.5rem;">🔬 Empirical Benchmark across 4,127 Clinical Fundus Scans</h3>
+                <p style="color: #64748b; font-size: 0.95rem;">Performance comparison of 6 distinct deep learning and hybrid architectures evaluated across identical multi-class validation splits:</p>
+            </div>
+            <div style="overflow-x: auto; border-radius: 8px; border: 1px solid rgba(148, 163, 184, 0.25);">
+                <table class="benchmark-table">
+                    <thead>
+                        <tr>
+                            <th>Rank</th>
+                            <th>Architecture</th>
+                            <th>Test Accuracy</th>
+                            <th>Macro F1</th>
+                            <th>DR Recall</th>
+                            <th>Precision</th>
+                            <th>Architectural Highlights</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr style="background: rgba(16, 185, 129, 0.08);">
+                            <td style="font-weight: 700;">🥇 Champion</td>
+                            <td style="font-weight: 700; color: #10b981;">InceptionV3 (Transfer Learning)</td>
+                            <td style="font-weight: 700; color: #10b981;">93.25%</td>
+                            <td style="font-weight: 600;">0.93</td>
+                            <td style="font-weight: 700; color: #10b981;">100.0%</td>
+                            <td>0.93</td>
+                            <td>Multi-scale inception kernels capturing microvascular lesions and optic cup changes.</td>
+                        </tr>
+                        <tr>
+                            <td style="font-weight: 600;">🥈 2nd</td>
+                            <td style="font-weight: 600;">ResNet50 + RBF-SVM Hybrid</td>
+                            <td style="font-weight: 600;">88.40%</td>
+                            <td>0.87</td>
+                            <td>96.8%</td>
+                            <td>0.88</td>
+                            <td>Deep residual feature extraction coupled with deterministic radial basis kernel SVM.</td>
+                        </tr>
+                        <tr>
+                            <td style="font-weight: 600;">🥉 3rd</td>
+                            <td style="font-weight: 600;">Custom CNN (KerasTuner Tuned)</td>
+                            <td>74.66%</td>
+                            <td>0.73</td>
+                            <td>98.0%</td>
+                            <td>0.74</td>
+                            <td>Dual Conv2D + Dense architecture optimized via RandomSearch hyperparameter tuning.</td>
+                        </tr>
+                        <tr>
+                            <td>4th</td>
+                            <td>ResNet50v2 + Gradient Boosting</td>
+                            <td>72.10%</td>
+                            <td>0.71</td>
+                            <td>91.5%</td>
+                            <td>0.72</td>
+                            <td>100-estimator gradient boosted decision trees over latent residual feature vectors.</td>
+                        </tr>
+                        <tr>
+                            <td>5th</td>
+                            <td>Decision Tree & Random Forest</td>
+                            <td>68.50%</td>
+                            <td>0.67</td>
+                            <td>85.2%</td>
+                            <td>0.68</td>
+                            <td>Classical ensemble tree baseline over flattened morphological representations.</td>
+                        </tr>
+                        <tr>
+                            <td>6th</td>
+                            <td>Linear SVM Baseline</td>
+                            <td>64.20%</td>
+                            <td>0.62</td>
+                            <td>82.0%</td>
+                            <td>0.63</td>
+                            <td>Convex optimization baseline evaluated on raw pixel intensity arrays.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
             """)
 
         with gr.TabItem("📄 Research & Methodology"):
