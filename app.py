@@ -20,7 +20,7 @@ except ImportError:
 if spaces is not None:
     @spaces.GPU
     def _zero_gpu_init():
-        """Satisfies ZeroGPU AST scanner without wrapping CPU inference."""
+        """Satisfies ZeroGPU AST scanner without blocking CPU calls."""
         pass
 
 # Try importing tensorflow and gradcam
@@ -74,13 +74,47 @@ if TF_AVAILABLE and os.path.exists(MODEL_PATH):
         print("Error loading model:", e)
 
 
+def format_probabilities_html(conf_dict):
+    """
+    Renders beautiful, responsive probability progress bars in HTML.
+    Eliminates Pydantic schema bugs associated with gr.Label in Gradio 5.
+    """
+    colors = {
+        "Cataract": "#f59e0b",
+        "Diabetic Retinopathy": "#ef4444",
+        "Glaucoma": "#8b5cf6",
+        "Normal": "#10b981"
+    }
+    html = '<div style="padding: 14px; border-radius: 8px; border: 1px solid rgba(148, 163, 184, 0.25); background: rgba(15, 23, 42, 0.03);">'
+    html += '<div style="font-weight: 700; font-size: 1.05rem; margin-bottom: 12px; color: inherit;">Diagnostic Probabilities</div>'
+
+    sorted_items = sorted(conf_dict.items(), key=lambda x: x[1], reverse=True)
+    for cat, prob in sorted_items:
+        pct = prob * 100
+        bar_color = colors.get(cat, "#3b82f6")
+        html += f"""
+        <div style="margin-bottom: 12px;">
+            <div style="display: flex; justify-content: space-between; font-size: 0.9rem; font-weight: 600; margin-bottom: 4px;">
+                <span>{cat}</span>
+                <span style="color: {bar_color};">{pct:.1f}%</span>
+            </div>
+            <div style="background: rgba(148, 163, 184, 0.2); border-radius: 6px; height: 12px; overflow: hidden;">
+                <div style="background: {bar_color}; width: {max(pct, 2):.1f}%; height: 100%; border-radius: 6px; transition: width 0.4s ease;"></div>
+            </div>
+        </div>
+        """
+    html += '</div>'
+    return html
+
+
 def analyze_fundus_image(image):
     """
     Robust inference and XAI visualization pipeline.
     Handles PIL images, file paths (str), dictionaries from Gradio 5, and numpy arrays.
     """
     if image is None:
-        return None, None, "⚠️ **Notice:** Please upload or select a valid retinal fundus scan."
+        placeholder_html = '<div style="padding: 14px; color: #64748b; font-style: italic;">Awaiting retinal scan input...</div>'
+        return placeholder_html, None, "⚠️ **Notice:** Please upload or select a retinal fundus scan from the examples."
 
     try:
         # 1. Normalize input to PIL Image
@@ -145,7 +179,8 @@ def analyze_fundus_image(image):
             heatmap_sim = cv2.cvtColor(heatmap_sim, cv2.COLOR_BGR2RGB)
             overlay_img = np.uint8(orig_rgb * 0.55 + heatmap_sim * 0.45)
 
-        # 3. Format Structured Clinical Diagnostic Report in English
+        # 3. Format Structured Outputs
+        html_probabilities = format_probabilities_html(conf_dict)
         info = CLINICAL_INSIGHTS[top_class]
         top_conf_pct = conf_dict[top_class] * 100
 
@@ -166,12 +201,12 @@ The heatmap on the right highlights high-activation regions driving the model's 
 > ⚠️ **Medical Disclaimer:** This system is an engineering research prototype for clinical decision support. Final diagnostic determinations must be validated by a board-certified ophthalmologist.
 """
 
-        return conf_dict, overlay_img, report_md
+        return html_probabilities, overlay_img, report_md
 
     except Exception as e:
         err_msg = f"⚠️ **Error during analysis:** {str(e)}"
         print("Analysis exception:", e)
-        return None, None, err_msg
+        return '<div style="color: red;">Analysis Error</div>', None, err_msg
 
 
 # --- Gradio UI Layout (English & Modern Styling) ---
@@ -219,19 +254,20 @@ with gr.Blocks(theme=gr.themes.Soft(), css=custom_css, title="RetinalVision-XAI"
                         gr.Examples(
                             examples=example_list,
                             inputs=input_img,
-                            outputs=[None],  # Populates image input
                             label="📋 Clinical Sample Scans (Click to Load Image)"
                         )
 
                 with gr.Column(scale=6):
-                    out_label = gr.Label(num_top_classes=4, label="Diagnostic Probabilities")
+                    out_probabilities = gr.HTML(
+                        value='<div style="padding: 14px; color: #64748b; font-style: italic;">Awaiting retinal scan input... Click "Analyze Fundus" to begin.</div>'
+                    )
                     out_heatmap = gr.Image(type="numpy", label="Grad-CAM Explainable AI Lesion Heatmap")
                     out_report = gr.Markdown()
 
             analyze_btn.click(
                 fn=analyze_fundus_image,
                 inputs=[input_img],
-                outputs=[out_label, out_heatmap, out_report],
+                outputs=[out_probabilities, out_heatmap, out_report],
                 api_name=False
             )
 
