@@ -16,7 +16,6 @@ pinned: false
 [![TensorFlow 2.15](https://img.shields.io/badge/TensorFlow-2.15-orange.svg)](https://tensorflow.org)
 [![Gradio UI](https://img.shields.io/badge/UI-Gradio-ff4b4b.svg)](https://gradio.app)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![ORCID: 0009-0003-9011-8167](https://img.shields.io/badge/ORCID-0009--0003--9011--8167-green)](https://orcid.org/0009-0003-9011-8167)
 
 > **RetinalVision-XAI** is an end-to-end medical computer vision research framework and clinical decision support system designed to detect and classify multi-class sight-threatening ophthalmic pathologies from high-resolution digital fundus images. 
 > 
@@ -100,15 +99,9 @@ Open [`train_export_colab.ipynb`](train_export_colab.ipynb) directly in Google C
 
 ---
 
-## 👥 Authors & Academic Citation
+## 🏫 Academic Research & Affiliation
 
-Developed as a Software Engineering graduation research thesis at **Kırklareli University**:
-
-* **Buğra Görmüş** — [ORCID: 0009-0003-9011-8167](https://orcid.org/0009-0003-9011-8167)
-* **Recep Umut Akpınar** — [ORCID: 0009-0001-5335-3999](https://orcid.org/0009-0001-5335-3999)
-* **Mesut Yıldız** — [ORCID: 0009-0002-0913-5713](https://orcid.org/0009-0002-0913-5713)
-* **Muhammet Acar** — [ORCID: 0009-0005-0859-7504](https://orcid.org/0009-0005-0859-7504)
-* **Yusuf Subaşı** — [ORCID: 0009-0006-5806-9774](https://orcid.org/0009-0006-5806-9774)
+Developed as a Software Engineering graduation thesis project at **Kırklareli University**, focusing on automated multi-class ophthalmic pathology classification, Explainable AI (XAI), and deep learning benchmarking across 4,127 clinical fundus scans.
 
 ---
 
