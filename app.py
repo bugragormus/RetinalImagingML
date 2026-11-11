@@ -9,6 +9,17 @@ from PIL import Image
 import cv2
 import gradio as gr
 
+# ZeroGPU compatibility for Hugging Face Spaces
+try:
+    import spaces
+except ImportError:
+    class MockSpaces:
+        def GPU(self, func=None, **kwargs):
+            if func is not None:
+                return func
+            return lambda f: f
+    spaces = MockSpaces()
+
 # Try importing tensorflow and gradcam
 try:
     import tensorflow as tf
@@ -56,6 +67,7 @@ if TF_AVAILABLE and os.path.exists(MODEL_PATH):
         print("Error loading model:", e)
 
 
+@spaces.GPU
 def analyze_fundus_image(image):
     """
     Main inference and XAI visualization pipeline.
